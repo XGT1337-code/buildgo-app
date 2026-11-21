@@ -1,0 +1,25 @@
+# Render Blueprint for the BuildGO API server (the phone app talks to it; no website is served).
+# Database: a PostgreSQL connection string from Neon (free) in DATABASE_URL. Keep the server in the
+# same region as the Neon project (here AWS US East = Render "virginia"), or every query crosses the ocean.
+services:
+  - type: web
+    name: buildgo-api
+    runtime: node
+    plan: free
+    region: virginia
+    buildCommand: npm install -g pnpm@10 && pnpm install --frozen-lockfile --filter "@workspace/api-server..." && pnpm --filter @workspace/api-server run build
+    startCommand: node --enable-source-maps artifacts/api-server/dist/index.mjs
+    healthCheckPath: /api/healthz
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      # Set in the Render dashboard, never in this file:
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: ADMIN_PASSWORD_HASH
+        sync: false

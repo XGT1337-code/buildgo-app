@@ -1,0 +1,18 @@
+{
+  "name": "@workspace/scripts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "db": "tsx --env-file=../.env ./src/local-db.ts",
+    "start": "tsx ./src/start.ts"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsx": "catalog:"
+  },
+  "dependencies": {
+    "embedded-postgres": "18.3.0-beta.17"
+  }
+}

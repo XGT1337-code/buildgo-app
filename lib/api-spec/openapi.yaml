@@ -1,0 +1,898 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.2.0
+  description: BuildGO API — construction equipment rental; accounts, people search, chat requests, chats with voice messages, admin.
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+  - name: chat
+  - name: admin
+  - name: media
+  - name: verification
+  - name: listings
+  - name: catalog
+  - name: weather
+paths:
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegisterInput" }
+      responses:
+        "201":
+          description: Account created and signed in
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSession" }
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginInput" }
+      responses:
+        "200":
+          description: Signed in
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSession" }
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      responses:
+        "204": { description: Session ended }
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      responses:
+        "200":
+          description: Current account
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Me" }
+  /auth/password:
+    post:
+      operationId: changePassword
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChangePasswordInput" }
+      responses:
+        "204": { description: Password changed; other sessions signed out }
+  /auth/username-available:
+    get:
+      operationId: checkUsername
+      tags: [auth]
+      parameters:
+        - in: query
+          name: username
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Whether the username can be registered
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UsernameAvailability" }
+  /people/search:
+    get:
+      operationId: searchPeople
+      tags: [chat]
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema: { type: string, minLength: 2, maxLength: 80 }
+      responses:
+        "200":
+          description: People matching first name, last name or username
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PersonResult" }
+  /chat/requests:
+    get:
+      operationId: listChatRequests
+      tags: [chat]
+      responses:
+        "200":
+          description: Pending requests to and from the current user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatRequestLists" }
+    post:
+      operationId: sendChatRequest
+      tags: [chat]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChatRequestInput" }
+      responses:
+        "200":
+          description: Request sent, or the conversation when both sides already agreed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatRequestResult" }
+  /chat/requests/{id}/accept:
+    post:
+      operationId: acceptChatRequest
+      tags: [chat]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Conversation opened
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatConversation" }
+  /chat/requests/{id}/decline:
+    post:
+      operationId: declineChatRequest
+      tags: [chat]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      responses:
+        "204": { description: Declined }
+  /chat/requests/{id}:
+    delete:
+      operationId: cancelChatRequest
+      tags: [chat]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      responses:
+        "204": { description: Cancelled }
+  /chat/conversations:
+    get:
+      operationId: listConversations
+      tags: [chat]
+      responses:
+        "200":
+          description: Conversations for the current user, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ChatConversation" }
+  /chat/conversations/{id}/messages:
+    get:
+      operationId: getChatMessages
+      tags: [chat]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+        - in: query
+          name: before
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          description: Latest 60 messages, oldest first; pass the oldest timestamp as before for earlier ones
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ChatMessage" }
+    post:
+      operationId: sendChatMessage
+      tags: [chat]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChatMessageInput" }
+      responses:
+        "201":
+          description: Saved message
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatMessage" }
+  /chat/conversations/{id}/read:
+    post:
+      operationId: markConversationRead
+      tags: [chat]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      responses:
+        "204": { description: Marked as read }
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      responses:
+        "200":
+          description: Totals for the admin dashboard
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminStats" }
+  /admin/users:
+    get:
+      operationId: listAdminUsers
+      tags: [admin]
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string, maxLength: 80 }
+      responses:
+        "200":
+          description: Accounts, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AdminUser" }
+  /admin/users/{id}:
+    patch:
+      operationId: updateAdminUser
+      tags: [admin]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdminUserUpdate" }
+      responses:
+        "200":
+          description: Updated account
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminUser" }
+    delete:
+      operationId: deleteAdminUser
+      tags: [admin]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      responses:
+        "204": { description: Account and its chats deleted }
+  /media:
+    post:
+      operationId: uploadMedia
+      tags: [media]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MediaInput" }
+      responses:
+        "201":
+          description: Stored image
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MediaRef" }
+  /vehicles/mine:
+    get:
+      operationId: listMyVehicles
+      tags: [verification]
+      responses:
+        "200":
+          description: Machines the current user registered
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Vehicle" } }
+  /vehicles:
+    post:
+      operationId: registerVehicle
+      tags: [verification]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VehicleInput" }
+      responses:
+        "201":
+          description: Saved and sent to the admins for review
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Vehicle" }
+  /vehicles/{id}:
+    delete:
+      operationId: deleteVehicle
+      tags: [verification]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      responses:
+        "204": { description: Deleted }
+  /license/mine:
+    get:
+      operationId: getMyLicense
+      tags: [verification]
+      responses:
+        "200":
+          description: The current user's latest driving licence submission
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LicenseState" }
+  /license:
+    post:
+      operationId: submitLicense
+      tags: [verification]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LicenseInput" }
+      responses:
+        "201":
+          description: Saved and sent to the admins for review
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DriverLicense" }
+  /listings:
+    get:
+      operationId: listListings
+      tags: [listings]
+      responses:
+        "200":
+          description: Approved listings, plus the caller's own in any state
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/ServerListing" } }
+    post:
+      operationId: createListing
+      tags: [listings]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ListingInput" }
+      responses:
+        "201":
+          description: Saved; visible to others only after an admin approves it
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ServerListing" }
+  /listings/{id}:
+    delete:
+      operationId: deleteServerListing
+      tags: [listings]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      responses:
+        "204": { description: Deleted }
+  /catalog:
+    get:
+      operationId: searchCatalog
+      tags: [catalog]
+      parameters:
+        - { in: query, name: q, required: true, schema: { type: string, maxLength: 80 } }
+        - { in: query, name: kind, schema: { $ref: "#/components/schemas/CatalogKind" } }
+        - { in: query, name: brand, schema: { type: string, maxLength: 60 } }
+      responses:
+        "200":
+          description: Matches from the built-in reference data and admin additions
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/CatalogItem" } }
+  /catalog/custom:
+    get:
+      operationId: listCustomCatalog
+      tags: [catalog]
+      responses:
+        "200":
+          description: Items admins added on top of the built-in reference data
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/CatalogItem" } }
+  /weather:
+    get:
+      operationId: getWeather
+      tags: [weather]
+      parameters:
+        - { in: query, name: lat, required: true, schema: { type: number, minimum: -90, maximum: 90 } }
+        - { in: query, name: lng, required: true, schema: { type: number, minimum: -180, maximum: 180 } }
+      responses:
+        "200":
+          description: 7-day forecast cross-checked between two independent services
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WeatherReport" }
+  /admin/reviews:
+    get:
+      operationId: listAdminReviews
+      tags: [admin]
+      responses:
+        "200":
+          description: Everything waiting for an admin decision
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReviewQueue" }
+  /admin/reviews/{kind}/{id}:
+    post:
+      operationId: decideReview
+      tags: [admin]
+      parameters:
+        - { in: path, name: kind, required: true, schema: { type: string, enum: [listing, vehicle, license] } }
+        - { in: path, name: id, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReviewDecision" }
+      responses:
+        "204": { description: Decision saved and the owner notified }
+  /admin/catalog/check:
+    post:
+      operationId: checkCatalogName
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CatalogCheckInput" }
+      responses:
+        "200":
+          description: Whether the proposed name already exists, is a likely typo, or is new
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CatalogCheck" }
+  /admin/catalog:
+    post:
+      operationId: addCatalogItem
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CatalogItemInput" }
+      responses:
+        "201":
+          description: Added
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CatalogItem" }
+  /admin/catalog/{id}:
+    delete:
+      operationId: deleteCatalogItem
+      tags: [admin]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      responses:
+        "204": { description: Removed }
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+components:
+  schemas:
+    Username:
+      type: string
+      minLength: 3
+      maxLength: 24
+      pattern: "^[a-zA-Z0-9_.]{3,24}$"
+    PersonName:
+      type: string
+      minLength: 1
+      maxLength: 40
+    RegisterInput:
+      type: object
+      required: [username, firstName, lastName, password]
+      properties:
+        username: { $ref: "#/components/schemas/Username" }
+        firstName: { $ref: "#/components/schemas/PersonName" }
+        lastName: { $ref: "#/components/schemas/PersonName" }
+        password: { type: string, minLength: 8, maxLength: 128 }
+        meta: { type: object, additionalProperties: true }
+    LoginInput:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string, minLength: 1, maxLength: 64 }
+        password: { type: string, minLength: 1, maxLength: 128 }
+    ChangePasswordInput:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword: { type: string, minLength: 1, maxLength: 128 }
+        newPassword: { type: string, minLength: 8, maxLength: 128 }
+    UsernameAvailability:
+      type: object
+      required: [available]
+      properties:
+        available: { type: boolean }
+        reason: { type: string }
+    Me:
+      type: object
+      required: [id, username, firstName, lastName, role, meta, createdAt]
+      properties:
+        id: { type: string }
+        username: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        role: { type: string, enum: [user, admin] }
+        meta: { type: object, additionalProperties: true }
+        createdAt: { type: string, format: date-time }
+    AuthSession:
+      type: object
+      required: [token, user]
+      properties:
+        token: { type: string }
+        user: { $ref: "#/components/schemas/Me" }
+    PublicUser:
+      type: object
+      required: [id, username, firstName, lastName, online]
+      properties:
+        id: { type: string }
+        username: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        online: { type: boolean }
+        lastSeenAt: { type: [string, "null"], format: date-time }
+    PersonResult:
+      allOf:
+        - $ref: "#/components/schemas/PublicUser"
+        - type: object
+          required: [relation]
+          properties:
+            relation: { type: string, enum: [none, requested, incoming, connected] }
+            requestId: { type: [string, "null"] }
+            conversationId: { type: [string, "null"] }
+    ChatRequest:
+      type: object
+      required: [id, from, to, status, createdAt]
+      properties:
+        id: { type: string }
+        from: { $ref: "#/components/schemas/PublicUser" }
+        to: { $ref: "#/components/schemas/PublicUser" }
+        status: { type: string, enum: [pending, accepted, declined] }
+        createdAt: { type: string, format: date-time }
+    ChatRequestLists:
+      type: object
+      required: [incoming, outgoing]
+      properties:
+        incoming: { type: array, items: { $ref: "#/components/schemas/ChatRequest" } }
+        outgoing: { type: array, items: { $ref: "#/components/schemas/ChatRequest" } }
+    ChatRequestInput:
+      type: object
+      required: [userId]
+      properties:
+        userId: { type: string }
+    ChatRequestResult:
+      type: object
+      properties:
+        request: { $ref: "#/components/schemas/ChatRequest" }
+        conversation: { $ref: "#/components/schemas/ChatConversation" }
+    VoiceInput:
+      type: object
+      required: [data, mime, durationMs]
+      properties:
+        data: { type: string, description: Base64 audio, at most 6 MB decoded, maxLength: 8400000 }
+        mime: { type: string, maxLength: 64 }
+        durationMs: { type: integer, minimum: 300, maximum: 300000 }
+    ChatMessageInput:
+      type: object
+      required: [clientId]
+      properties:
+        clientId: { type: string, format: uuid }
+        text: { type: string, maxLength: 4000 }
+        voice: { $ref: "#/components/schemas/VoiceInput" }
+    ChatMessage:
+      type: object
+      required: [id, conversationId, senderId, clientId, kind, text, at]
+      properties:
+        id: { type: string }
+        conversationId: { type: string }
+        senderId: { type: string }
+        clientId: { type: string }
+        kind: { type: string, enum: [text, voice] }
+        text: { type: string }
+        audioId: { type: [string, "null"] }
+        durationMs: { type: [integer, "null"] }
+        at: { type: string, format: date-time }
+    ChatConversation:
+      type: object
+      required: [id, peer, unread, peerReadAt, updatedAt]
+      properties:
+        id: { type: string }
+        peer: { $ref: "#/components/schemas/PublicUser" }
+        last:
+          oneOf:
+            - $ref: "#/components/schemas/ChatMessage"
+            - type: "null"
+        unread: { type: integer }
+        peerReadAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    AdminStats:
+      type: object
+      required: [users, admins, banned, online, signupsToday, conversations, messages, voiceMessages, pendingRequests, pendingReviews, listings]
+      properties:
+        users: { type: integer }
+        admins: { type: integer }
+        banned: { type: integer }
+        online: { type: integer }
+        signupsToday: { type: integer }
+        conversations: { type: integer }
+        messages: { type: integer }
+        voiceMessages: { type: integer }
+        pendingRequests: { type: integer }
+        pendingReviews: { type: integer }
+        listings: { type: integer }
+    AdminUser:
+      type: object
+      required: [id, username, firstName, lastName, role, banned, online, createdAt]
+      properties:
+        id: { type: string }
+        username: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        role: { type: string, enum: [user, admin] }
+        banned: { type: boolean }
+        online: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        lastSeenAt: { type: [string, "null"], format: date-time }
+    AdminUserUpdate:
+      type: object
+      properties:
+        banned: { type: boolean }
+        role: { type: string, enum: [user, admin] }
+    ReviewStatus:
+      type: string
+      enum: [pending, approved, rejected]
+    CheckItem:
+      type: object
+      required: [field, level, message]
+      properties:
+        field: { type: string }
+        level: { type: string, enum: [ok, warn, error] }
+        message: { type: string }
+        tpl: { type: string, description: "Message template with placeholders, for translation" }
+        vars: { type: object, additionalProperties: true }
+    MediaInput:
+      type: object
+      required: [data, mime]
+      properties:
+        data: { type: string, description: Base64 image at most 4 MB decoded, maxLength: 5600000 }
+        mime: { type: string, maxLength: 40 }
+        private: { type: boolean, description: Documents are private to the owner and admins }
+    MediaRef:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string }
+    VehicleInput:
+      type: object
+      required: [typeId, brand, model, vin, docIds]
+      properties:
+        typeId: { type: string, maxLength: 40 }
+        brand: { type: string, minLength: 1, maxLength: 60 }
+        model: { type: string, minLength: 1, maxLength: 60 }
+        year: { type: integer, minimum: 1950, maximum: 2100 }
+        powerHp: { type: integer, minimum: 1, maximum: 2000 }
+        vin: { type: string, maxLength: 30 }
+        plate: { type: string, maxLength: 20 }
+        photoId: { type: string }
+        docIds: { type: array, items: { type: string }, minItems: 1, maxItems: 4 }
+    Vehicle:
+      type: object
+      required: [id, typeId, brand, model, vin, docIds, status, checks, createdAt]
+      properties:
+        id: { type: string }
+        typeId: { type: string }
+        brand: { type: string }
+        model: { type: string }
+        year: { type: [integer, "null"] }
+        powerHp: { type: [integer, "null"] }
+        vin: { type: string }
+        plate: { type: [string, "null"] }
+        photoId: { type: [string, "null"] }
+        docIds: { type: array, items: { type: string } }
+        status: { $ref: "#/components/schemas/ReviewStatus" }
+        reviewNote: { type: [string, "null"] }
+        checks: { type: array, items: { $ref: "#/components/schemas/CheckItem" } }
+        createdAt: { type: string, format: date-time }
+    LicenseInput:
+      type: object
+      required: [number, categories, expiresOn, frontId]
+      properties:
+        number: { type: string, minLength: 1, maxLength: 20 }
+        categories: { type: array, items: { type: string, maxLength: 5 }, minItems: 1, maxItems: 16 }
+        expiresOn: { type: string, format: date }
+        frontId: { type: string }
+        backId: { type: string }
+    DriverLicense:
+      type: object
+      required: [id, number, categories, expiresOn, frontId, status, checks, createdAt]
+      properties:
+        id: { type: string }
+        number: { type: string }
+        categories: { type: array, items: { type: string } }
+        expiresOn: { type: string, format: date }
+        frontId: { type: string }
+        backId: { type: [string, "null"] }
+        status: { $ref: "#/components/schemas/ReviewStatus" }
+        reviewNote: { type: [string, "null"] }
+        checks: { type: array, items: { $ref: "#/components/schemas/CheckItem" } }
+        createdAt: { type: string, format: date-time }
+    LicenseState:
+      type: object
+      required: [approvedCategories]
+      properties:
+        license: { oneOf: [{ $ref: "#/components/schemas/DriverLicense" }, { type: "null" }] }
+        approvedCategories: { type: array, items: { type: string }, description: Categories of the latest approved unexpired licence }
+    ListingInput:
+      type: object
+      required: [title, category, pricePerDay, village]
+      properties:
+        title: { type: string, minLength: 3, maxLength: 80 }
+        category: { type: string, enum: [earthmoving, trucks, lifting, concrete, road, tools] }
+        typeId: { type: string, maxLength: 40 }
+        vehicleId: { type: string }
+        pricePerDay: { type: number, exclusiveMinimum: 0, maximum: 100000 }
+        village: { type: string, minLength: 2, maxLength: 80 }
+        description: { type: string, maxLength: 2000 }
+        photoId: { type: string }
+        terms: { type: object, additionalProperties: true }
+        year: { type: integer, minimum: 1950, maximum: 2100 }
+        powerHp: { type: integer, minimum: 1, maximum: 2000 }
+        availableFrom: { type: string, format: date }
+        availableTo: { type: string, format: date }
+    PersonRef:
+      type: object
+      required: [id, firstName, lastName, username]
+      properties:
+        id: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        username: { type: string }
+    ServerListing:
+      type: object
+      required: [id, owner, title, category, pricePerDay, village, description, status, checks, createdAt, mine]
+      properties:
+        id: { type: string }
+        owner: { $ref: "#/components/schemas/PersonRef" }
+        title: { type: string }
+        category: { type: string, enum: [earthmoving, trucks, lifting, concrete, road, tools] }
+        typeId: { type: [string, "null"] }
+        vehicle: { oneOf: [{ $ref: "#/components/schemas/Vehicle" }, { type: "null" }] }
+        pricePerDay: { type: number }
+        village: { type: string }
+        lat: { type: [number, "null"] }
+        lng: { type: [number, "null"] }
+        description: { type: string }
+        photoId: { type: [string, "null"] }
+        terms: { type: [object, "null"], additionalProperties: true }
+        year: { type: [integer, "null"] }
+        powerHp: { type: [integer, "null"] }
+        availableFrom: { type: [string, "null"] }
+        availableTo: { type: [string, "null"] }
+        status: { $ref: "#/components/schemas/ReviewStatus" }
+        reviewNote: { type: [string, "null"] }
+        checks: { type: array, items: { $ref: "#/components/schemas/CheckItem" } }
+        createdAt: { type: string, format: date-time }
+        mine: { type: boolean }
+    VehicleReview:
+      allOf:
+        - $ref: "#/components/schemas/Vehicle"
+        - type: object
+          required: [owner]
+          properties:
+            owner: { $ref: "#/components/schemas/PersonRef" }
+    LicenseReview:
+      allOf:
+        - $ref: "#/components/schemas/DriverLicense"
+        - type: object
+          required: [owner]
+          properties:
+            owner: { $ref: "#/components/schemas/PersonRef" }
+    ReviewQueue:
+      type: object
+      required: [listings, vehicles, licenses]
+      properties:
+        listings: { type: array, items: { $ref: "#/components/schemas/ServerListing" } }
+        vehicles: { type: array, items: { $ref: "#/components/schemas/VehicleReview" } }
+        licenses: { type: array, items: { $ref: "#/components/schemas/LicenseReview" } }
+    ReviewDecision:
+      type: object
+      required: [decision]
+      properties:
+        decision: { type: string, enum: [approve, reject] }
+        note: { type: string, maxLength: 500 }
+    CatalogKind:
+      type: string
+      enum: [work, material, equipment, brand, model, place]
+    CatalogItem:
+      type: object
+      required: [id, kind, az, ru, en, source]
+      properties:
+        id: { type: string }
+        kind: { $ref: "#/components/schemas/CatalogKind" }
+        az: { type: string }
+        ru: { type: string }
+        en: { type: string }
+        sub: { type: [string, "null"] }
+        lat: { type: [number, "null"] }
+        lng: { type: [number, "null"] }
+        source: { type: string, enum: [builtin, admin] }
+        score: { type: number }
+    CatalogCheckInput:
+      type: object
+      required: [kind, name]
+      properties:
+        kind: { $ref: "#/components/schemas/CatalogKind" }
+        name: { type: string, minLength: 1, maxLength: 80 }
+        brand: { type: string, maxLength: 60 }
+    CatalogCheck:
+      type: object
+      required: [verdict, message, matches]
+      properties:
+        verdict: { type: string, enum: [exists, similar, new, invalid] }
+        message: { type: string }
+        matches: { type: array, items: { $ref: "#/components/schemas/CatalogItem" } }
+    CatalogItemInput:
+      type: object
+      required: [kind, az]
+      properties:
+        kind: { $ref: "#/components/schemas/CatalogKind" }
+        az: { type: string, minLength: 1, maxLength: 80 }
+        ru: { type: string, maxLength: 80 }
+        en: { type: string, maxLength: 80 }
+        brand: { type: string, maxLength: 60 }
+        lat: { type: number }
+        lng: { type: number }
+        force: { type: boolean, description: Add even though a similar name exists }
+    SourceDay:
+      type: object
+      required: [hi, lo, rain]
+      properties:
+        hi: { type: number }
+        lo: { type: number }
+        rain: { type: number }
+        wind: { type: [number, "null"] }
+        code: { type: [integer, "null"] }
+    ForecastDay:
+      type: object
+      required: [date, openMeteo, agree]
+      properties:
+        date: { type: string }
+        openMeteo: { $ref: "#/components/schemas/SourceDay" }
+        metNo: { oneOf: [{ $ref: "#/components/schemas/SourceDay" }, { type: "null" }] }
+        agree: { type: boolean, description: Both services within 3 C and similar rain }
+    WeatherNow:
+      type: object
+      required: [at]
+      properties:
+        openMeteo: { type: [number, "null"] }
+        metNo: { type: [number, "null"] }
+        at: { type: string, format: date-time }
+    WeatherReport:
+      type: object
+      required: [days, now, sources, fetchedAt]
+      properties:
+        days: { type: array, items: { $ref: "#/components/schemas/ForecastDay" } }
+        now: { $ref: "#/components/schemas/WeatherNow" }
+        sources: { type: array, items: { type: string } }
+        fetchedAt: { type: string, format: date-time }
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status

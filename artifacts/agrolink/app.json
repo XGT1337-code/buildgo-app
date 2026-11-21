@@ -1,0 +1,77 @@
+{
+  "expo": {
+    "name": "BuildGO",
+    "slug": "agrolink",
+    "version": "2.0.5",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "imageWidth": 220,
+      "resizeMode": "contain",
+      "backgroundColor": "#16181C"
+    },
+    "scheme": "agrolink",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.agrigo.app",
+      "versionCode": 13,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#16181C"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.INTERNET"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png",
+      "output": "single",
+      "name": "BuildGO",
+      "themeColor": "#16181C",
+      "backgroundColor": "#F3F2EE"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "BuildGO uses your photos to attach pictures of sites, documents and equipment.",
+          "cameraPermission": "BuildGO uses the camera to photograph sites, documents and equipment."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "BuildGO uses the microphone to record voice messages in chats."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#16181C",
+          "image": "./assets/images/adaptive-icon.png",
+          "imageWidth": 200
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "backgroundColor": "#16181C"
+  }
+}
